@@ -7,7 +7,7 @@ import { createWriteStream, existsSync, chmodSync, mkdirSync, createReadStream }
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 export const VERSION = "151.0.7908.0";
 const REPO = "tiliondev/fortress";
@@ -56,12 +56,22 @@ export async function sha256(path) {
 export async function expectedSha(asset, host) {
   try {
     const r = await fetch(`${host}/SHA256SUMS`);
-    if (!r.ok) return null;
+    if (!r.ok) {
+      process.stderr.write(JSON.stringify({ level: "error", operation: "fortress.checksum.fetch",
+        trace_id: randomUUID(), asset, http_status: r.status, occurrence_count: 1 }) + "\n");
+      return null;
+    }
     for (const line of (await r.text()).split("\n")) {
       const p = line.trim().split(/\s+/);
       if (p.length === 2 && p[1].replace(/^\*/, "") === asset) return p[0].toLowerCase();
     }
-  } catch { /* none */ }
+  } catch (error) {
+    process.stderr.write(JSON.stringify({ level: "error", operation: "fortress.checksum.fetch",
+      trace_id: randomUUID(), asset, error_type: error.name, occurrence_count: 1 }) + "\n");
+    return null;
+  }
+  process.stderr.write(JSON.stringify({ level: "error", operation: "fortress.checksum.missing",
+    trace_id: randomUUID(), asset, occurrence_count: 1 }) + "\n");
   return null;
 }
 
@@ -83,7 +93,7 @@ async function ensureNative(plat, host, tag) {
     if (act !== exp) throw new Error(`SHA256 mismatch for ${asset}: expected ${exp}, got ${act}`);
     process.stderr.write("[tilion-fortress] SHA256 verified\n");
   } else {
-    process.stderr.write("[tilion-fortress] WARNING: no SHA256SUMS published; skipping verification\n");
+    throw new Error(`Cannot verify ${asset}: SHA256SUMS unavailable or entry missing; refusing extraction`);
   }
 
   if (kind === "tar") {

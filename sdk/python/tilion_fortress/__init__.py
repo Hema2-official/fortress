@@ -12,7 +12,7 @@ Docker image; Docker is also the fallback anywhere a native launch isn't availab
         print(f.cdp_url)   # connect any CDP client (Playwright/Puppeteer)
 """
 from __future__ import annotations
-import hashlib, json, os, platform, shutil, subprocess, sys, tarfile, time, urllib.request, zipfile
+import hashlib, json, os, platform, shutil, subprocess, sys, tarfile, time, urllib.request, uuid, zipfile
 from pathlib import Path
 
 __version__ = "151.0.7908.0.post4"
@@ -71,8 +71,13 @@ def _expected_sha(asset: str, host: str) -> str | None:
                 parts = line.split()
                 if len(parts) == 2 and parts[1].lstrip("*") == asset:
                     return parts[0].lower()
-    except Exception:
+    except Exception as exc:
+        sys.stderr.write(json.dumps({"level": "error", "operation": "fortress.checksum.fetch",
+            "trace_id": str(uuid.uuid4()), "asset": asset, "error_type": type(exc).__name__,
+            "http_status": getattr(exc, "code", None), "occurrence_count": 1}) + "\n")
         return None
+    sys.stderr.write(json.dumps({"level": "error", "operation": "fortress.checksum.missing",
+        "trace_id": str(uuid.uuid4()), "asset": asset, "occurrence_count": 1}) + "\n")
     return None
 
 
@@ -97,7 +102,8 @@ def _download(plat: str, host: str, tag: str) -> Path:
             raise RuntimeError(f"SHA256 mismatch for {asset}: expected {expected}, got {actual}")
         sys.stderr.write("[tilion-fortress] SHA256 verified\n")
     else:
-        sys.stderr.write("[tilion-fortress] WARNING: no SHA256SUMS published; skipping verification\n")
+        archive.unlink(missing_ok=True)
+        raise RuntimeError(f"Cannot verify {asset}: SHA256SUMS unavailable or entry missing; refusing extraction")
 
     if kind == "tar":
         with tarfile.open(archive) as t:

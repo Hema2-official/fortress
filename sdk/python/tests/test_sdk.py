@@ -148,3 +148,14 @@ def test_channel_resolution():
         tf.Fortress(channel="nope"); assert False
     except ValueError:
         pass
+
+
+def test_download_refuses_missing_checksum_before_extraction(monkeypatch, tmp_path):
+    monkeypatch.setattr(tf, "_CACHE", tmp_path)
+    def download(url, path):
+        Path(path).write_bytes(b"unverified bytes, not a browser or archive")
+    monkeypatch.setattr(tf.urllib.request, "urlretrieve", download)
+    monkeypatch.setattr(tf, "_expected_sha", lambda *args: None)
+    with pytest.raises(RuntimeError, match="refusing extraction"):
+        tf._download("linux-x64", "https://example.invalid", "test")
+    assert not (tmp_path / "test/linux-x64/tilion-fortress").exists()
