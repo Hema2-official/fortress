@@ -32,6 +32,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from release_manifest import evaluate_manifest
 
 REPO = "tiliondev/fortress"
 API = "https://api.github.com"
@@ -221,7 +222,22 @@ def main() -> int:
     ap.add_argument("--repo", default=REPO, help=f"owner/name (default: {REPO})")
     ap.add_argument("--full", action="store_true",
                     help="download and re-hash every asset instead of trusting the API digest")
+    ap.add_argument("--manifest", type=Path, help="validate an offline release record")
+    ap.add_argument("--artifacts-dir", type=Path, help="verify retained archives against the manifest")
     args = ap.parse_args()
+    if args.manifest:
+        manifest = json.loads(args.manifest.read_text())
+        sums_text = args.manifest.with_name("SHA256SUMS").read_text()
+        errors = evaluate_manifest(manifest, sums_text, args.artifacts_dir)
+        if args.tag != manifest.get("tag"):
+            errors.append("requested tag disagrees with manifest")
+        for error in errors:
+            print("FAIL: " + error, file=sys.stderr)
+        if not errors:
+            print("OK: offline release manifest" + (" and archive bytes" if args.artifacts_dir else " (metadata only)"))
+        return 1 if errors else 0
+    if args.artifacts_dir:
+        ap.error("--artifacts-dir requires --manifest")
     token = os.environ.get("GITHUB_TOKEN")
 
     try:
