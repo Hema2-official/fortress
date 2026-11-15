@@ -12,6 +12,27 @@ export VK_ICD_FILENAMES="$HERE/vk_swiftshader_icd.json"
 # shellcheck source=packaging/persona.sh
 source "$HERE/persona.sh"
 uxr_prepare_persona "$@"
-exec "$HERE/chrome" --use-angle=swiftshader --enable-unsafe-webgpu \
-  --enable-features=Vulkan --use-webgpu-adapter=swiftshader \
-  --enable-dawn-features=use_vulkan "${UXR_DEFAULTS[@]}" "${UXR_ARGS[@]}"
+CHROME_ARGS=(--use-angle=swiftshader --enable-unsafe-webgpu
+  --enable-features=Vulkan --use-webgpu-adapter=swiftshader
+  --enable-dawn-features=use_vulkan "${UXR_DEFAULTS[@]}" "${UXR_ARGS[@]}")
+if [[ "${TILION_EPHEMERAL:-}" != 1 ]]; then
+  exec "$HERE/chrome" "${CHROME_ARGS[@]}"
+fi
+EPHEMERAL_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tilion-profile.XXXXXXXX")"
+CHILD_PID=""
+cleanup() {
+  if [[ -n "$CHILD_PID" ]] && kill -0 "$CHILD_PID" 2>/dev/null; then
+    kill "$CHILD_PID"
+    wait "$CHILD_PID" || echo 'tilion: child terminated during ephemeral cleanup' >&2
+  fi
+  rm -rf -- "$EPHEMERAL_DIR"
+}
+trap cleanup EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
+# This final switch intentionally wins over any persistent profile argument.
+"$HERE/chrome" "${CHROME_ARGS[@]}" "--user-data-dir=$EPHEMERAL_DIR" &
+CHILD_PID=$!
+status=0
+wait "$CHILD_PID" || status=$?
+exit "$status"

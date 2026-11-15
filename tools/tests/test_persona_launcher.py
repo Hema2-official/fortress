@@ -114,3 +114,20 @@ def test_explicit_render_seeds_cannot_link_default_launches(launcher):
     assert int(values["--uxr-canvas-seed"]) > 0
     assert int(values["--uxr-audio-seed"]) > 0
     assert "fresh per launch" in result.stderr
+
+
+def test_ephemeral_profile_is_distinct_and_removed_after_exit(launcher):
+    _, first = flags(launcher(TILION_EPHEMERAL="1"))
+    _, second = flags(launcher(TILION_EPHEMERAL="1"))
+    assert first["--user-data-dir"] != second["--user-data-dir"]
+    assert not Path(first["--user-data-dir"]).exists()
+    assert not Path(second["--user-data-dir"]).exists()
+
+
+def test_ephemeral_launch_cannot_reuse_explicit_persistent_profile(launcher, tmp_path):
+    persistent = tmp_path / "keep-me"
+    persistent.mkdir()
+    (persistent / "data").write_text("keep")
+    _, values = flags(launcher([f"--user-data-dir={persistent}"], TILION_EPHEMERAL="1"))
+    assert values["--user-data-dir"] != str(persistent)
+    assert (persistent / "data").read_text() == "keep"
