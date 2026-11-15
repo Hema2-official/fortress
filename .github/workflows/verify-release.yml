@@ -25,6 +25,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Verify release assets + SHA256SUMS
-        run: python tools/verify_release.py "${{ github.event.release.tag_name || inputs.tag }}"
+        run: python tools/verify_release.py "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY"
         env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
