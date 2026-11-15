@@ -1,0 +1,16 @@
+{
+  "source_repository": "https://github.com/jason-snell/humanized-cursor-trajectory-gen",
+  "source_revision": "9759714caf8d42eb996a78e36e5172d2000a5d45",
+  "source_file": "dataset/trajectory.json",
+  "source_sha256": "f7b6eb0265e7e9342c70942e6d02eba4f87d8185799c09aff9fefc6ce90d4c62",
+  "generated_header_sha256": "34c25de0b4fa75ed1802c6e46f44862fef943144d3719e6e38ddf10bf4c7cab7",
+  "license": "MIT",
+  "spatial_traces": 64,
+  "points_per_trace": 24,
+  "timing": "independently synthesized; source contains no per-point timestamps",
+  "discarded_fields": [
+    "id",
+    "screen",
+    "time"
+  ]
+}
