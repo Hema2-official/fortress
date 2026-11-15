@@ -19,11 +19,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends binutils \
     && rm -rf /var/lib/apt/lists/*
 COPY tilion-fortress/ /opt/tilion/
 RUN set -eux; \
-    strip --strip-unneeded /opt/tilion/chrome 2>/dev/null || true; \
-    strip --strip-unneeded /opt/tilion/chrome_crashpad_handler 2>/dev/null || true; \
-    for so in /opt/tilion/*.so /opt/tilion/*.so.1; do strip --strip-unneeded "$so" 2>/dev/null || true; done; \
+    strip --strip-unneeded /opt/tilion/chrome; \
+    if [ -e /opt/tilion/chrome_crashpad_handler ]; then strip --strip-unneeded /opt/tilion/chrome_crashpad_handler; fi; \
+    for so in /opt/tilion/*.so /opt/tilion/*.so.1; do \
+      if [ -e "$so" ]; then strip --strip-unneeded "$so"; fi; \
+    done; \
     find /opt/tilion/locales -type f -name '*.pak' ! -name 'en-US.pak' ! -name 'en-GB.pak' -delete; \
-    chmod +x /opt/tilion/tilion /opt/tilion/chrome 2>/dev/null || true
+    chmod +x /opt/tilion/tilion /opt/tilion/chrome
 
 # ---- stage 2: final ----
 FROM debian:bookworm-slim

@@ -7,6 +7,14 @@
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="${1:?out/Fortress dir}"; FONTS="${2:?fonts dir}"; DEST="${3:?dest dir}"; PLATFORM="${4:-linux-x64}"
+# Fail before touching the destination when required build outputs are missing.
+case "$PLATFORM" in linux-x64|linux-arm64) ;; *) echo "Unsupported bundle platform: $PLATFORM" >&2; exit 1 ;; esac
+for f in chrome resources.pak icudtl.dat libEGL.so libGLESv2.so libvk_swiftshader.so libvulkan.so.1 vk_swiftshader_icd.json locales/en-US.pak; do
+  if [[ ! -s "$SRC/$f" ]]; then
+    echo "Missing required runtime file: $SRC/$f" >&2
+    exit 1
+  fi
+done
 B="$DEST/tilion-fortress"
 rm -rf "$B"; mkdir -p "$B/fonts"
 
@@ -27,19 +35,24 @@ cp -a "$SRC/locales" "$B/locales"
 # internal UI, not JS-visible). NOTE: archive the UNSTRIPPED chrome + a .debug symbol file
 # (objcopy --only-keep-debug) BEFORE this, so field crashpad minidumps can be symbolicated.
 # ELF-only — do NOT run on Windows (.pdb) / macOS bundles.
-if command -v strip >/dev/null 2>&1; then
-  strip --strip-unneeded "$B/chrome" 2>/dev/null || true
-  [ -e "$B/chrome_crashpad_handler" ] && strip --strip-unneeded "$B/chrome_crashpad_handler" 2>/dev/null || true
-  for so in "$B"/*.so "$B"/*.so.1; do [ -e "$so" ] && strip --strip-unneeded "$so" 2>/dev/null || true; done
+# Missing tools or failed stripping are build failures, with stderr preserved.
+command -v strip >/dev/null
+strip --strip-unneeded "$B/chrome"
+if [[ -e "$B/chrome_crashpad_handler" ]]; then
+  strip --strip-unneeded "$B/chrome_crashpad_handler"
 fi
-find "$B/locales" -type f -name '*.pak' ! -name 'en-US.pak' ! -name 'en-GB.pak' -delete 2>/dev/null || true
+shopt -s nullglob
+for so in "$B"/*.so "$B"/*.so.1; do
+  strip --strip-unneeded "$so"
+done
+find "$B/locales" -type f -name '*.pak' ! -name 'en-US.pak' ! -name 'en-GB.pak' -delete
 
 # Fonts + launcher + fontconfig template + README.
 cp "$FONTS"/*.ttf "$B/fonts/"
 cp "$REPO/packaging/persona.sh" "$B/persona.sh"
 cp "$REPO/packaging/tilion" "$B/tilion"; chmod +x "$B/tilion"
 cp "$REPO/packaging/fonts.conf.template" "$B/fonts/fonts.conf.template"
-cp "$REPO/packaging/bundle-README.txt" "$B/README.txt" 2>/dev/null || true
+cp "$REPO/packaging/bundle-README.txt" "$B/README.txt"
 
 ASSET="tilion-fortress-${PLATFORM}.tar.gz"
 ( cd "$DEST" && tar czf "$ASSET" tilion-fortress )
