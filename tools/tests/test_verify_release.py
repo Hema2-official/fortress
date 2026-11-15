@@ -135,3 +135,46 @@ def test_mismatched_sdk_tables_fails():
 def test_parse_sha256sums_handles_binary_marker_and_case():
     parsed = vr.parse_sha256sums(f"AA11BB22  {LINUX}\ncafef00d *{WIN}\n")
     assert parsed == {LINUX: "aa11bb22", WIN: "cafef00d"}
+
+
+def test_versioned_asset_names_are_independent_of_sdk_pins():
+    names = vr.release_asset_names("v153.0.8010.36", SDK_ASSETS)
+    assert names["linux-x64"] == "fortress-v153-linux-x64.tar.gz"
+    assert names["win-x64"] == "fortress-v153-win-x64.zip"
+    assert names["linux-x86"] == "fortress-v153-linux-x86.tar.gz"
+    assert vr.release_asset_names("v151.0.7908.0", SDK_ASSETS) == SDK_ASSETS
+    assert vr.release_asset_names("fural-bsd-151.0.7908.0", SDK_ASSETS) == SDK_ASSETS
+    assert "linux-x86" not in vr.release_asset_names("v156.0.8078.47", SDK_ASSETS)
+
+
+def test_versioned_release_passes_without_changing_sdk_channels():
+    names = vr.release_asset_names("v156.0.8078.47", SDK_ASSETS)
+    name = names["linux-x64"]
+    rep = vr.evaluate(release(asset("SHA256SUMS"), asset(name, digest=H_LINUX)),
+                      sums((H_LINUX, name)), names)
+    assert rep.failures == []
+
+
+def test_duplicate_checksum_cannot_hide_an_earlier_value():
+    rel = release(asset("SHA256SUMS"), asset(LINUX, digest=H_LINUX))
+    rep = evaluate(rel, sums(("0" * 64, LINUX), (H_LINUX, LINUX)))
+    assert "unique SHA256SUMS entries" in rep.failures
+
+
+def test_malformed_checksum_fails_even_when_api_digest_is_missing():
+    rel = release(asset("SHA256SUMS"), asset(LINUX))
+    rep = evaluate(rel, f"not-a-sha256  {LINUX}\n")
+    assert "valid SHA256SUMS entries" in rep.failures
+
+
+def test_malformed_extra_checksum_line_is_not_silently_dropped():
+    rel = release(asset("SHA256SUMS"), asset(LINUX, digest=H_LINUX))
+    rep = evaluate(rel, sums((H_LINUX, LINUX)) + "malformed\n")
+    assert "valid SHA256SUMS entries" in rep.failures
+
+
+def test_duplicate_release_assets_fail():
+    rel = release(asset("SHA256SUMS"), asset(LINUX, digest="0" * 64),
+                  asset(LINUX, digest=H_LINUX))
+    rep = evaluate(rel, sums((H_LINUX, LINUX)))
+    assert "unique release assets" in rep.failures

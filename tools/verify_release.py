@@ -91,6 +91,19 @@ def parse_node_asset_names(path: Path) -> set[str] | None:
     return set(re.findall(r'asset:\s*"([^"]+)"', path.read_text(encoding="utf-8")))
 
 
+def release_asset_names(tag: str, legacy: dict[str, str]) -> dict[str, str]:
+    """Release naming is independent of the SDK's pinned download channel."""
+    match = re.fullmatch(r"v(\d+)\.\d+\.\d+\.\d+(?:[-+].+)?", tag)
+    if not match or int(match.group(1)) < 153:
+        return dict(legacy)
+    major = match.group(1)
+    platforms = ("linux-x64", "linux-arm64", "linux-armhf", "win-x64", "mac-arm64", "mac-x64")
+    if int(major) < 156:
+        platforms += ("linux-x86",)
+    return {platform: f"fortress-v{major}-{platform}." +
+            ("zip" if platform == "win-x64" else "tar.gz") for platform in platforms}
+
+
 # --------------------------------------------------------------------------- core evaluation
 def evaluate(release: dict, sums_text: str, sdk_assets: dict[str, str], *,
              required: set[str] = REQUIRED, full: bool = False,
@@ -105,6 +118,14 @@ def evaluate(release: dict, sums_text: str, sdk_assets: dict[str, str], *,
     rep = Report()
     assets = {a["name"]: a for a in release.get("assets", [])}
     sums = parse_sha256sums(sums_text)
+    lines = [line.split() for line in sums_text.splitlines() if line.strip()]
+    valid_lines = all(len(parts) == 2 and re.fullmatch(r"[0-9a-fA-F]{64}", parts[0])
+                      for parts in lines)
+    rep.check("valid SHA256SUMS entries", bool(lines) and valid_lines)
+    names = [parts[1].lstrip("*") for parts in lines if len(parts) == 2]
+    rep.check("unique SHA256SUMS entries", len(names) == len(set(names)))
+    release_names = [a["name"] for a in release.get("assets", [])]
+    rep.check("unique release assets", len(release_names) == len(set(release_names)))
 
     # The SDK tables must agree, or the two installers expect different asset names.
     if node_asset_names is not None:
@@ -232,10 +253,14 @@ def main() -> int:
 
     sdk_assets = load_sdk_assets()
     node_names = parse_node_asset_names(REPO_ROOT / "sdk" / "node" / "index.js")
+    if node_names is not None and node_names != set(sdk_assets.values()):
+        Report().check("SDK asset tables agree (python == node)", False)
+        return 1
+    asset_names = release_asset_names(args.tag, sdk_assets)
     hasher = make_hasher(assets, token) if args.full else None
 
-    rep = evaluate(release, sums_text, sdk_assets, required=REQUIRED,
-                   full=args.full, hasher=hasher, node_asset_names=node_names)
+    rep = evaluate(release, sums_text, asset_names, required=REQUIRED,
+                   full=args.full, hasher=hasher)
 
     print("-" * 60)
     if rep.failures:
