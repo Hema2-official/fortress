@@ -123,3 +123,24 @@ def test_offline_verifier_cli_checks_manifest(release_record, tmp_path):
     ], capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stderr
     assert "archive bytes" in result.stdout
+
+
+def test_oversized_zip_symlink_is_not_loaded_into_memory(tmp_path):
+    path = tmp_path / "test.zip"
+    with zipfile.ZipFile(path, "w") as archive:
+        item = zipfile.ZipInfo("bundle/link")
+        item.create_system = 3
+        item.external_attr = 0o120777 << 16
+        archive.writestr(item, "x" * (rm.MAX_LINK_BYTES + 1))
+    _, errors = rm.inspect_archive(path, "bundle/chrome")
+    assert any("oversized link target" in e for e in errors)
+
+
+def test_uncompressed_size_budget_is_checked_before_reading_engine(tmp_path):
+    path = tmp_path / "test.tar.gz"
+    with tarfile.open(path, "w:gz") as archive:
+        item = tarfile.TarInfo("bundle/chrome")
+        item.size = rm.MAX_UNCOMPRESSED_BYTES + 1
+        archive.addfile(item)
+    _, errors = rm.inspect_archive(path, "bundle/chrome")
+    assert "archive exceeds uncompressed size budget" in errors

@@ -7,6 +7,9 @@ import re
 import tarfile
 import zipfile
 
+MAX_UNCOMPRESSED_BYTES = 4 * 1024**3
+MAX_LINK_BYTES = 4096
+
 
 def digest(stream):
     h = hashlib.sha256()
@@ -17,7 +20,7 @@ def digest(stream):
 
 def safe_name(name):
     path = PurePosixPath(name.replace("\\", "/"))
-    return bool(name) and not path.is_absolute() and ".." not in path.parts and ":" not in name
+    return bool(name) and all(ord(c) >= 32 for c in name) and not path.is_absolute() and ".." not in path.parts and ":" not in name
 
 
 def safe_link(name, target, hardlink=False):
@@ -39,6 +42,7 @@ def inspect_archive(path: Path, engine_file: str):
     engine_hash = None
     problems = []
     seen = set()
+    total_size = 0
 
     def inspect(name, stream=None, link=None, hardlink=False):
         nonlocal engine_hash
@@ -59,15 +63,26 @@ def inspect_archive(path: Path, engine_file: str):
     if path.suffix.lower() == ".zip":
         with zipfile.ZipFile(path) as archive:
             for member in archive.infolist():
+                total_size += member.file_size
+                if total_size > MAX_UNCOMPRESSED_BYTES:
+                    problems.append("archive exceeds uncompressed size budget")
+                    break
                 # Unix symlinks in ZIP store their target as the member data.
                 if (member.external_attr >> 16) & 0o170000 == 0o120000:
-                    inspect(member.filename, link=archive.read(member).decode("utf-8"))
+                    if member.file_size > MAX_LINK_BYTES:
+                        problems.append(f"oversized link target: {member.filename}")
+                    else:
+                        inspect(member.filename, link=archive.read(member).decode("utf-8", errors="strict"))
                 else:
                     with archive.open(member) as stream:
                         inspect(member.filename, stream)
     else:
         with tarfile.open(path, "r:gz") as archive:
             for member in archive:
+                total_size += member.size
+                if total_size > MAX_UNCOMPRESSED_BYTES:
+                    problems.append("archive exceeds uncompressed size budget")
+                    break
                 if member.isfile():
                     with archive.extractfile(member) as stream:
                         inspect(member.name, stream)
