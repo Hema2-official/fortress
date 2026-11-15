@@ -36,6 +36,7 @@ find "$B/locales" -type f -name '*.pak' ! -name 'en-US.pak' ! -name 'en-GB.pak' 
 
 # Fonts + launcher + fontconfig template + README.
 cp "$FONTS"/*.ttf "$B/fonts/"
+cp "$REPO/packaging/persona.sh" "$B/persona.sh"
 cp "$REPO/packaging/tilion" "$B/tilion"; chmod +x "$B/tilion"
 cp "$REPO/packaging/fonts.conf.template" "$B/fonts/fonts.conf.template"
 cp "$REPO/packaging/bundle-README.txt" "$B/README.txt" 2>/dev/null || true
