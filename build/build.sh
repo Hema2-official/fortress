@@ -17,6 +17,11 @@ REVISION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rev
 # Compilation is separate from the small source-compatibility gate.
 export TMPDIR="${TMPDIR:-$WORK/tmp}"
 mkdir -p "$WORK" "$TMPDIR"
+# systemd services do not necessarily inherit login environment variables.
+export HOME="${HOME:-$(getent passwd "$(id -u)" | cut -d: -f6)}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$WORK/cache}"
+export GOCACHE="${GOCACHE:-$WORK/go-cache}"
+mkdir -p "$XDG_CACHE_HOME" "$GOCACHE"
 FREE_KB="$(df -Pk "$WORK" | awk 'NR==2 { print $4 }')"
 if (( FREE_KB < 200 * 1024 * 1024 )); then
   echo "Chromium builder requires at least 200 GiB free; available: $FREE_KB KiB" >&2
