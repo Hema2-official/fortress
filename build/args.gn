@@ -24,7 +24,6 @@ is_chrome_branded = false
 chrome_pgo_phase = 0
 
 # Trim weight / attack surface.
-enable_nacl = false
 enable_widevine = false
 
 # Target.
@@ -40,8 +39,10 @@ target_os = "linux"
 # Stock Chrome runs on these CPUs, so we pin the whole tree back to the SSE4.2 (x86-64-v2)
 # baseline. Keeps SSE4.2/POPCNT; drops AVX/AVX2/BMI/FMA. Costs ~nothing in practice and
 # restores compatibility down to ~Nehalem-era hardware.
-extra_cflags = "-mno-avx -mno-avx2 -mno-bmi -mno-bmi2 -mno-lzcnt -mno-fma -mno-f16c -mno-movbe"
-extra_cxxflags = "-mno-avx -mno-avx2 -mno-bmi -mno-bmi2 -mno-lzcnt -mno-fma -mno-f16c -mno-movbe"
+extra_cflags = [ "-mno-avx", "-mno-avx2", "-mno-bmi", "-mno-bmi2",
+                 "-mno-lzcnt", "-mno-fma", "-mno-f16c", "-mno-movbe" ]
 
-# Keep the final link feasible on the A9_Max WSL builder.
-use_thin_lto = false
+# Preserve CFI while bounding ThinLTO memory on the A9_Max WSL builder.
+use_thin_lto = true
+thin_lto_jobs = "2"
+use_siso = false

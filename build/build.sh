@@ -58,8 +58,8 @@ python3 "$REPO/tools/check_chromium_source.py" --source "$WORK/chromium/src"
 "$REPO/build/apply-patches.sh" "$WORK/chromium/src"
 
 # 5. configure + build
-gn gen "out/$OUT" --args="$(cat "$ARGS_FILE")"
-autoninja -j "${BUILD_JOBS:-4}" -C "out/$OUT" chrome chrome_crashpad_handler
+"$WORK/chromium/src/buildtools/linux64/gn" gen "out/$OUT" --fail-on-unused-args --args="$(cat "$ARGS_FILE")"
+"$WORK/chromium/src/third_party/ninja/ninja" -j "${BUILD_JOBS:-4}" -C "out/$OUT" chrome chrome_crashpad_handler
 
 echo "==> Done: $WORK/chromium/src/out/$OUT/chrome"
 "$WORK/chromium/src/out/$OUT/chrome" --version

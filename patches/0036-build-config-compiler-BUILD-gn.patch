@@ -1,0 +1,31 @@
+diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -50,6 +50,9 @@
+
+ declare_args() {
+   # This allows overriding the location of lld.
++  # Bound local build resources without disabling CFI.
++  thin_lto_jobs = "all"
++  extra_cflags = []
+   lld_path = default_lld_path
+ }
+
+@@ -326,7 +329,7 @@
+
+ config("compiler") {
+   asmflags = []
+-  cflags = []
++  cflags = extra_cflags
+   cflags_c = []
+   cflags_cc = []
+   cflags_objc = []
+@@ -835,7 +838,7 @@
+       # and let it use all cores.
+       # TODO(thakis): Check if '=0' (that is, number of cores, instead
+       # of "all" which means number of hardware threads) is faster.
+-      ldflags += [ "-Wl,--thinlto-jobs=all" ]
++      ldflags += [ "-Wl,--thinlto-jobs=$thin_lto_jobs" ]
+
+       if (is_chromeos) {
+         # ARM was originally set lower than x86 to keep the size

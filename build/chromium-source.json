@@ -34,7 +34,8 @@
     "third_party/blink/renderer/modules/webgl/webgl2_rendering_context_base.cc": "30289da234726ac9e03c91e1139ee89003cf9dc22e937a17f8bc6f21d78f3fa6",
     "third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc": "cdd4ad854c1af086de7b9dc7d5850b8a20e50490aa39a8b56be87fc4251b8d57",
     "third_party/blink/renderer/modules/webgpu/gpu_adapter_info.cc": "b1407eaf37534105c6aec343297aba15cb8b97f28913ed3af58384f509a46969",
-    "third_party/blink/renderer/platform/graphics/image_data_buffer.cc": "dddd84bead7cf84b5806a05be5c8d34de97194c1fdded10735888c50fe1ace3f"
+    "third_party/blink/renderer/platform/graphics/image_data_buffer.cc": "dddd84bead7cf84b5806a05be5c8d34de97194c1fdded10735888c50fe1ace3f",
+    "build/config/compiler/BUILD.gn": "5fd8410dce79947067a656feb24d150bb838269f3f934f3028b00a62fc56b859"
   },
   "scope": "Public patch application only; compilation and runtime verification are required before releasing a binary."
 }
