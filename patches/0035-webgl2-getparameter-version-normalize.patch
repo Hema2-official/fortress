@@ -1,20 +1,17 @@
-WebGL2 getParameter normalize GL_VERSION / GL_SHADING_LANGUAGE_VERSION.
-
-WebGL2RenderingContextBase has its own getParameter that returned the REAL backend
-GL_VERSION / GLSL string (SwiftShader / host driver) even when vendor/renderer are
-spoofed by patch 0029 (which only patched WebGL1). WebGL2 is what nearly every
-fingerprinter uses, so the real driver leaked on datacenter hosts. Mirror the WebGL1
-normalization under the same uxr-webgl-* guard.
-
 diff --git a/third_party/blink/renderer/modules/webgl/webgl2_rendering_context_base.cc b/third_party/blink/renderer/modules/webgl/webgl2_rendering_context_base.cc
+index 9eb36fe..75bf8ac 100644
 --- a/third_party/blink/renderer/modules/webgl/webgl2_rendering_context_base.cc
 +++ b/third_party/blink/renderer/modules/webgl/webgl2_rendering_context_base.cc
-@@ -9,3 +9,4 @@
+@@ -7,6 +7,7 @@
+ #include <memory>
+
  #include "base/compiler_specific.h"
 +#include "base/uxr_config.h"
  #include "base/containers/heap_array.h"
+ #include "base/feature_list.h"
  #include "base/numerics/checked_math.h"
-@@ -4785,13 +4785,25 @@ ScriptValue WebGL2RenderingContextBase::getParameter(ScriptState* script_state,
+@@ -4840,6 +4841,13 @@ ScriptValue WebGL2RenderingContextBase::getParameter(ScriptState* script_state,
+     return ScriptValue::CreateNull(script_state->GetIsolate());
    switch (pname) {
      case GL_SHADING_LANGUAGE_VERSION: {
 +      // Normalize GLSL/VERSION so WebGL2 matches the spoofed renderer.
@@ -27,7 +24,7 @@ diff --git a/third_party/blink/renderer/modules/webgl/webgl2_rendering_context_b
        return WebGLAny(
            script_state,
            StrCat({"WebGL GLSL ES 3.00 (",
-                   String(ContextGL()->GetString(GL_SHADING_LANGUAGE_VERSION)),
+@@ -4847,6 +4855,11 @@ ScriptValue WebGL2RenderingContextBase::getParameter(ScriptState* script_state,
                    ")"}));
      }
      case GL_VERSION:
@@ -39,4 +36,3 @@ diff --git a/third_party/blink/renderer/modules/webgl/webgl2_rendering_context_b
        return WebGLAny(
            script_state,
            StrCat({"WebGL 2.0 (", String(ContextGL()->GetString(GL_VERSION)),
-                   ")"}));

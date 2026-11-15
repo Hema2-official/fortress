@@ -1,20 +1,27 @@
 #!/usr/bin/env bash
 # Fortress full build: fetch depot_tools, sync Chromium to the pinned tag,
-# apply patches, configure, and compile the stripped official binary.
+# apply public patches, configure, and compile the stripped independent binary.
 #
 # Usage:  build/build.sh [workdir]
-#   workdir defaults to ./.fortress-build  (needs ~100GB free + many hours)
+#   workdir defaults to ./.fortress-build (needs >=200 GiB free + many hours)
 #
-# Env:  CHROMIUM_VERSION  (defaults to the CHROMIUM_VERSION file)
-#       TMPDIR            (point at a real disk; /tmp tmpfs will fill and fail)
+# Env: BUILD_JOBS (default 4); TMPDIR (must live on a real disk).
+# Version and source revision are pinned by CHROMIUM_VERSION + chromium-source.json.
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK="${1:-$REPO/.fortress-build}"
 ARGS_FILE="$REPO/build/args.gn"
 OUT="Fortress"
-VER="${CHROMIUM_VERSION:-$(cat "$REPO/CHROMIUM_VERSION")}"
+VER="$(cat "$REPO/CHROMIUM_VERSION")"
+REVISION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["revision"])' "$REPO/build/chromium-source.json")"
+# Compilation is separate from the small source-compatibility gate.
 export TMPDIR="${TMPDIR:-$WORK/tmp}"
 mkdir -p "$WORK" "$TMPDIR"
+FREE_KB="$(df -Pk "$WORK" | awk 'NR==2 { print $4 }')"
+if (( FREE_KB < 200 * 1024 * 1024 )); then
+  echo "Chromium builder requires at least 200 GiB free; available: $FREE_KB KiB" >&2
+  exit 1
+fi
 
 echo "==> Fortress build | Chromium $VER | out/$OUT | workdir $WORK"
 
@@ -24,25 +31,35 @@ if [ ! -d "$WORK/depot_tools" ]; then
 fi
 export PATH="$WORK/depot_tools:$PATH"
 
-# 2. fetch + sync to the pinned tag
-if [ ! -d "$WORK/chromium/src" ]; then
-  mkdir -p "$WORK/chromium"
-  ( cd "$WORK/chromium" && fetch --nohooks --no-history chromium )
+# 2. Fetch only the pinned tag instead of fetching today's main branch first.
+mkdir -p "$WORK/chromium/src"
+if [[ ! -f "$WORK/chromium/.gclient" ]]; then
+  (cd "$WORK/chromium" && gclient config --unmanaged https://chromium.googlesource.com/chromium/src.git)
+fi
+if [[ ! -d "$WORK/chromium/src/.git" ]]; then
+  git -C "$WORK/chromium/src" init
+  git -C "$WORK/chromium/src" remote add origin https://chromium.googlesource.com/chromium/src.git
 fi
 cd "$WORK/chromium/src"
 git fetch --depth 1 origin "refs/tags/$VER:refs/tags/$VER"
-git checkout -f "tags/$VER"
-gclient sync -D --no-history --with_branch_heads --reset
+ACTUAL_REVISION="$(git rev-parse "tags/$VER^{commit}")"
+if [[ "$ACTUAL_REVISION" != "$REVISION" ]]; then
+  echo "Chromium tag moved: expected $REVISION, got $ACTUAL_REVISION" >&2
+  exit 1
+fi
+git checkout --detach "$REVISION"
+gclient sync -D --no-history
 
 # 3. install build deps (first run; harmless to repeat)
-./build/install-build-deps.sh --no-prompt || true
+./build/install-build-deps.sh --no-prompt
+python3 "$REPO/tools/check_chromium_source.py" --source "$WORK/chromium/src"
 
 # 4. apply Fortress patches
 "$REPO/build/apply-patches.sh" "$WORK/chromium/src"
 
 # 5. configure + build
 gn gen "out/$OUT" --args="$(cat "$ARGS_FILE")"
-autoninja -C "out/$OUT" chrome chrome_crashpad_handler
+autoninja -j "${BUILD_JOBS:-4}" -C "out/$OUT" chrome chrome_crashpad_handler
 
 echo "==> Done: $WORK/chromium/src/out/$OUT/chrome"
 "$WORK/chromium/src/out/$OUT/chrome" --version

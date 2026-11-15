@@ -43,4 +43,5 @@ target_os = "linux"
 extra_cflags = "-mno-avx -mno-avx2 -mno-bmi -mno-bmi2 -mno-lzcnt -mno-fma -mno-f16c -mno-movbe"
 extra_cxxflags = "-mno-avx -mno-avx2 -mno-bmi -mno-bmi2 -mno-lzcnt -mno-fma -mno-f16c -mno-movbe"
 
-# ThinLTO is on by default for official builds; left implicit.
+# Keep the final link feasible on the A9_Max WSL builder.
+use_thin_lto = false

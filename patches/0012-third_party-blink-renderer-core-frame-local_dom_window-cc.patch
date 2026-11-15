@@ -1,5 +1,5 @@
 diff --git a/third_party/blink/renderer/core/frame/local_dom_window.cc b/third_party/blink/renderer/core/frame/local_dom_window.cc
-index 3761d36b53..b39e4bd028 100644
+index 8285e37..780a4f3 100644
 --- a/third_party/blink/renderer/core/frame/local_dom_window.cc
 +++ b/third_party/blink/renderer/core/frame/local_dom_window.cc
 @@ -31,6 +31,8 @@
@@ -11,43 +11,43 @@ index 3761d36b53..b39e4bd028 100644
  #include "base/metrics/histogram_macros.h"
  #include "base/task/single_thread_task_runner.h"
  #include "base/trace_event/trace_id_helper.h"
-@@ -1605,6 +1607,12 @@ int LocalDOMWindow::outerHeight() const {
-   if (!GetFrame())
-     return 0;
+@@ -1685,6 +1687,13 @@ int LocalDOMWindow::outerHeight() const {
+     return innerHeight();
+   }
  
-+  {  // FORTRESS: persona outer height (fixes outerHeight===innerHeight headless tell)
-+    int p_v = 0;
-+    if (base::UxrConfig::GetInstance().GetInt("uxr-outer-height", &p_v) && p_v > 0)
-+      return p_v;
++  int persona_height = 0;
++  if (base::UxrConfig::GetInstance().GetInt("uxr-outer-height",
++                                         &persona_height) &&
++      persona_height > 0) {
++    return persona_height;
 +  }
 +
-   LocalFrame* frame = GetFrame();
- 
-   // FencedFrames should return innerHeight to prevent passing
-@@ -1630,6 +1638,12 @@ int LocalDOMWindow::outerWidth() const {
-   if (!GetFrame())
+   Page* page = frame->GetPage();
+   if (!page) {
      return 0;
+@@ -1717,6 +1726,13 @@ int LocalDOMWindow::outerWidth() const {
+     return innerWidth();
+   }
  
-+  {  // FORTRESS: persona outer width
-+    int p_v = 0;
-+    if (base::UxrConfig::GetInstance().GetInt("uxr-outer-width", &p_v) && p_v > 0)
-+      return p_v;
++  int persona_width = 0;
++  if (base::UxrConfig::GetInstance().GetInt("uxr-outer-width",
++                                         &persona_width) &&
++      persona_width > 0) {
++    return persona_width;
 +  }
 +
-   LocalFrame* frame = GetFrame();
- 
-   // FencedFrames should return innerWidth to prevent passing
-@@ -1833,6 +1847,14 @@ double LocalDOMWindow::devicePixelRatio() const {
-   if (!GetFrame())
+   Page* page = frame->GetPage();
+   if (!page) {
+     return 0;
+@@ -1944,6 +1960,12 @@ double LocalDOMWindow::devicePixelRatio() const {
      return 0.0;
+   }
  
-+  if (base::UxrConfig::GetInstance().Has("uxr-device-pixel-ratio")) {  // FORTRESS
-+    double p_dpr = 0.0;
-+    if (base::StringToDouble(
-+            base::UxrConfig::GetInstance().Get("uxr-device-pixel-ratio"), &p_dpr) &&
-+        p_dpr > 0.0) {
-+      return p_dpr;
-+    }
++  double persona_dpr = 0.0;
++  if (base::StringToDouble(
++          base::UxrConfig::GetInstance().Get("uxr-device-pixel-ratio"),
++          &persona_dpr) && persona_dpr > 0.0) {
++    return persona_dpr;
 +  }
    return GetFrame()->DevicePixelRatio();
  }

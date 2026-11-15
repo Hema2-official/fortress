@@ -1,0 +1,20 @@
+name: Chromium source compatibility
+on:
+  push:
+    branches: [main]
+    paths: [CHROMIUM_VERSION, 'build/chromium-source.json', 'patches/**', 'tools/check_chromium_source.py', '.github/workflows/chromium-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-patches:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source hashes and apply all patches
+        run: python tools/check_chromium_source.py
+        env:
+          GH_TOKEN: ${{ github.token }}

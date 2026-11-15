@@ -1,9 +1,9 @@
 diff --git a/base/BUILD.gn b/base/BUILD.gn
-index 539782c068..e831553518 100644
+index 9569528..b7e0ad7 100644
 --- a/base/BUILD.gn
 +++ b/base/BUILD.gn
-@@ -1000,6 +1000,8 @@ component("base") {
-     "types/zip.h",
+@@ -1027,6 +1027,8 @@ component("base") {
+     "types/variant_util.h",
      "unguessable_token.cc",
      "unguessable_token.h",
 +    "uxr_config.cc",

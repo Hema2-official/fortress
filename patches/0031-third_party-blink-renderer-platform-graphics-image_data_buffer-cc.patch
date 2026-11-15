@@ -1,18 +1,18 @@
 diff --git a/third_party/blink/renderer/platform/graphics/image_data_buffer.cc b/third_party/blink/renderer/platform/graphics/image_data_buffer.cc
-index c76f6553e1..df8be63237 100644
+index d05ea26..526162d 100644
 --- a/third_party/blink/renderer/platform/graphics/image_data_buffer.cc
 +++ b/third_party/blink/renderer/platform/graphics/image_data_buffer.cc
 @@ -33,6 +33,9 @@
  #include "third_party/blink/renderer/platform/graphics/image_data_buffer.h"
  
  #include "base/compiler_specific.h"
-+#include "base/command_line.h"  // FORTRESS
-+#include "base/strings/string_number_conversions.h"  // FORTRESS
-+#include "base/uxr_config.h"  // FORTRESS
++#include "base/command_line.h"
++#include "base/strings/string_number_conversions.h"
++#include "base/uxr_config.h"
+ #include "base/logging.h"
  #include "base/memory/ptr_util.h"
  #include "third_party/blink/renderer/platform/image-encoders/image_encoder_utils.h"
- #include "third_party/blink/renderer/platform/wtf/text/base64.h"
-@@ -43,6 +46,51 @@
+@@ -45,6 +48,51 @@
  
  namespace blink {
  
