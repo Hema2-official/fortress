@@ -35,7 +35,8 @@
     "third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc": "08f92189b3e9005ed91f36cd74d4a6ff7a1452020db9f2baf1b20b70ead09a74",
     "third_party/blink/renderer/modules/webgpu/gpu_adapter_info.cc": "b1407eaf37534105c6aec343297aba15cb8b97f28913ed3af58384f509a46969",
     "third_party/blink/renderer/platform/graphics/image_data_buffer.cc": "2bfee82163ed7e1df2c032a8f55034b378f9223620c305e08d9180b78bb7ded0",
-    "build/config/compiler/BUILD.gn": "925dbcbcc5139268fe71b59a20fd667c6f5aec843988636d4643f9bdbc5e22b2"
+    "build/config/compiler/BUILD.gn": "925dbcbcc5139268fe71b59a20fd667c6f5aec843988636d4643f9bdbc5e22b2",
+    "base/i18n/icubridge/default_icu_locale.h": "5c489715d54ce394dd6bc6c33d0cdce5107ee937f5283873f5f357894a089e3a"
   },
   "scope": "Public patch application only; compilation and runtime verification are required before releasing a binary."
 }
