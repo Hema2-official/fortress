@@ -1,20 +1,20 @@
 diff --git a/third_party/blink/renderer/core/frame/navigator_language.cc b/third_party/blink/renderer/core/frame/navigator_language.cc
-index 75cd346131..376dece63a 100644
+index a333624..a088252 100644
 --- a/third_party/blink/renderer/core/frame/navigator_language.cc
 +++ b/third_party/blink/renderer/core/frame/navigator_language.cc
 @@ -5,6 +5,11 @@
  #include "third_party/blink/renderer/core/frame/navigator_language.h"
  
- #include "base/command_line.h"
+ #include "third_party/blink/renderer/core/probe/core_probes.h"
 +#include "third_party/blink/renderer/core/execution_context/execution_context.h"
 +#include "v8/include/v8-isolate.h"
 +#include "base/i18n/rtl.h"
 +#include "third_party/blink/renderer/platform/wtf/wtf.h"
 +#include "base/uxr_config.h"
- #include "services/network/public/cpp/features.h"
- #include "third_party/blink/public/common/switches.h"
- #include "third_party/blink/renderer/core/frame/web_feature.h"
-@@ -69,6 +74,30 @@ void NavigatorLanguage::SetLanguagesForTesting(const String& languages) {
+ #include "third_party/blink/renderer/platform/language.h"
+ #include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
+ 
+@@ -61,6 +66,30 @@ void NavigatorLanguage::SetLanguagesDirty() {
  }
  
  void NavigatorLanguage::EnsureUpdatedLanguage() {
